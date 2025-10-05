@@ -1,0 +1,13 @@
+complete_drum_archive/**
+ClassifiedArchive/**
+TestData/**
+TrainingData/**
+*.wav
+*.flac
+*.mp3
+*.aiff
+*.au
+.DS_Store
+*.kt3
+.pkf
+
