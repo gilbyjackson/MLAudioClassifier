@@ -19,24 +19,30 @@ python3 scripts/strict_populate_training.py --copy
 ## What Makes This EXTREMELY STRICT?
 
 ### ✅ Only Explicit Tokens
+
 - Files MUST have category tokens in their filename
 - Examples: `kick01.wav`, `snare_acoustic.wav`, `hihat_closed.wav`
 - **Rejected**: `drum01.wav`, `kit_sound.wav`, `perc.wav`
 
 ### ✅ No Folder-Based Classification
+
 - Original script used folder names → can lead to false positives
 - This script: **filename only** → more reliable
 
 ### ✅ Rejects Ambiguous Files
+
 - Files matching multiple categories are rejected
 - Example: `kick_snare_combo.wav` → **REJECTED**
 
 ### ✅ Strict Exclusions
+
 - Files with forbidden tokens are rejected
 - Example: `kick_reverb.wav` → **REJECTED** if "reverb" is forbidden
 
 ### ✅ Global Exclusions
+
 Always rejected:
+
 - FX samples (`fx`, `sfx`, `effect`)
 - Vocal samples (`vox`, `vocal`, `voice`)
 - Loops (`loop`)
@@ -50,15 +56,17 @@ Accepted: 10,791 (23.0%)
 Rejected: 36,171 (77.0%)
 ```
 
-### Breakdown by Category (31 categories with samples):
+### Breakdown by Category (31 categories with samples)
 
 **Drum Kit** (6,344 samples):
+
 - Kick: 1,364
 - Snare: 1,942
 - Tom: 1,758
 - Hihat: 1,280
 
 **Cymbals** (523 samples):
+
 - Crash: 363
 - Ride: 313
 - Cymbal: 138
@@ -68,6 +76,7 @@ Rejected: 36,171 (77.0%)
 - Sizzle: 4
 
 **Hand Percussion** (987 samples):
+
 - Clap: 479
 - Tambourine: 142
 - Shaker: 149
@@ -76,6 +85,7 @@ Rejected: 36,171 (77.0%)
 - Cabasa: 98
 
 **Latin/World** (990 samples):
+
 - Conga: 396
 - Bongo: 187
 - Timbale: 123
@@ -84,6 +94,7 @@ Rejected: 36,171 (77.0%)
 - Guiro: 79
 
 **Special/Melodic** (1,947 samples):
+
 - Perc: 872
 - Rim: 314
 - Cowbell: (not listed - would need "cowbell" token)
@@ -105,55 +116,69 @@ Rejected: 36,171 (77.0%)
 ## Files Created
 
 ### Main Script
+
 **`scripts/strict_populate_training.py`**
+
 - ~850 lines of Python
 - Fully documented with docstrings
 - Command-line interface with multiple modes
 
 ### Documentation
+
 **`docs/STRICT_CLASSIFICATION_GUIDE.md`**
+
 - Complete classification rules
 - Category definitions
 - Usage examples
 - Troubleshooting guide
 
 ### Helper Scripts
+
 **`scripts/run_strict_examples.sh`**
+
 - Interactive examples
 - Step-by-step walkthrough
 
 ## Usage Modes
 
 ### 1. Validation Mode (Safe)
+
 ```bash
 python3 scripts/strict_populate_training.py --validate-only
 ```
+
 - Scans all files
 - Shows classification results
 - **Does NOT copy any files**
 - Perfect for testing
 
 ### 2. Validation with Logs
+
 ```bash
 python3 scripts/strict_populate_training.py --validate-only --save-logs
 ```
+
 - Same as validation mode
 - **Plus**: Saves detailed logs to `logs/` directory
 - Review exactly which files accepted/rejected
 
 ### 3. Copy Mode (Active)
+
 ```bash
 python3 scripts/strict_populate_training.py --copy
 ```
+
 - Scans and classifies files
 - **Copies files to TrainingData**
 - Cleans existing category folders first
 - Creates new organized structure
 
 ### 4. Copy Without Clean
+
 ```bash
 python3 scripts/strict_populate_training.py --copy --no-clean
 ```
+
 - Appends to existing TrainingData
 - Does NOT remove current files
 - Useful for adding more samples
@@ -181,13 +206,15 @@ python3 scripts/strict_populate_training.py \
 
 ## When to Use Which Script?
 
-### Use `organize_drum_archive.py` (Original) if:
+### Use `organize_drum_archive.py` (Original) if
+
 - You want maximum sample count
 - You trust the folder structure
 - You're okay with some false positives
 - You want faster processing
 
-### Use `strict_populate_training.py` (New) if:
+### Use `strict_populate_training.py` (New) if
+
 - You want maximum quality/accuracy
 - You need to validate before copying
 - You want detailed logs
@@ -197,18 +224,21 @@ python3 scripts/strict_populate_training.py \
 ## Next Steps After Population
 
 1. **Review the logs** (if you used `--save-logs`)
+
    ```bash
    ls -lh logs/
    # Open accepted_samples_*.txt and rejected_samples_*.txt
    ```
 
 2. **Check the TrainingData structure**
+
    ```bash
    ls -lh TrainingData/AudioSamples/
    # Should see folders for each category
    ```
 
 3. **Verify sample counts**
+
    ```bash
    for dir in TrainingData/AudioSamples/*; do
      echo "$(basename $dir): $(ls $dir | wc -l) samples"
@@ -220,15 +250,18 @@ python3 scripts/strict_populate_training.py \
 ## Troubleshooting
 
 ### "Source directory not found"
+
 - Check that `/Users/Gilby/complete_drum_archive` exists
 - Or specify custom path with `--source`
 
 ### "Too few samples"
+
 - This is expected with STRICT rules
 - Review rejection logs to understand why
 - Consider if quality > quantity for your use case
 
 ### "Want to include more files"
+
 - Edit `STRICT_CATEGORIES` in the script
 - Add more `required_tokens` patterns
 - Remove some `forbidden_tokens`
@@ -237,6 +270,7 @@ python3 scripts/strict_populate_training.py \
 ## Support
 
 For detailed information, see:
+
 - **Full Guide**: `docs/STRICT_CLASSIFICATION_GUIDE.md`
 - **Script**: `scripts/strict_populate_training.py` (well-commented)
 - **Examples**: `scripts/run_strict_examples.sh`
