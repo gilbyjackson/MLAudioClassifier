@@ -1,0 +1,1 @@
+Scripts follow standard PEP 8 style with descriptive function names, module-level docstrings, and inline guidance prints. JSON and .keras artifacts kept under data/ and models/. Notebooks operate from project root paths. No custom lint rules observed.

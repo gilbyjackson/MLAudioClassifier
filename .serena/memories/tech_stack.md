@@ -1,0 +1,1 @@
+Python 3 project relying on TensorFlow/Keras for deep learning, Librosa for audio feature extraction, NumPy/Pandas for data handling, Matplotlib/Seaborn for visualization. Workflows primarily run through Jupyter notebooks with supporting Python scripts and shell helpers.

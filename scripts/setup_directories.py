@@ -13,8 +13,8 @@ def setup_directories():
     project_dir = os.getcwd()
     print(f"Setting up directories in: {project_dir}")
     
-    # Create SampleLib directory for unsorted samples
-    sample_lib = "SampleLib"
+    # Create complete_drum_archive directory for unsorted samples
+    sample_lib = "complete_drum_archive"
     if not os.path.exists(sample_lib):
         os.makedirs(sample_lib)
         print(f"✅ Created {sample_lib}/ directory")
@@ -59,7 +59,7 @@ def setup_directories():
     print("1. Add your sorted training samples to TrainingData/AudioSamples/[Instrument]/")
     print("2. Run MFCC_Feature_Extractor.ipynb")
     print("3. Run Model1_Train.ipynb or Model2_Train.ipynb")
-    print("4. Add unsorted samples to SampleLib/")
+    print("4. Add unsorted samples to complete_drum_archive/")
     print("5. Run PracticalDemo.ipynb to classify them!")
 
 if __name__ == "__main__":

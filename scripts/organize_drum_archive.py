@@ -4,47 +4,170 @@ import re
 from pathlib import Path
 
 CATEGORIES = {
-    'Kick': {'patterns': [r'\bkick\d*\b'], 'folders': ['kick', 'kik'], 'exclude': ['metal', 'snare']},
-    'Snare': {'patterns': [r'\bsnare?\d*\b', r'\bsnr\d*\b'], 'folders': ['snare', 'snr'], 'exclude': ['kick', 'rim']},
-    'Tom': {'patterns': [r'\btom\d*\b'], 'folders': ['tom'], 'exclude': ['rim']},
-    'Hihat': {'patterns': [r'\b(?:hi-?hat)\d*\b'], 'folders': ['hihat', 'hi-hat'], 'exclude': ['crash']},
-    'Crash': {'patterns': [r'\bcrash\d*\b'], 'folders': ['crash'], 'exclude': []},
-    'Ride': {'patterns': [r'\bride\d*\b'], 'folders': ['ride'], 'exclude': []},
-    'China': {'patterns': [r'\bchina\d*\b'], 'folders': ['china'], 'exclude': []},
-    'Splash': {'patterns': [r'\bsplash\d*\b'], 'folders': ['splash'], 'exclude': []},
-    'Sizzle': {'patterns': [r'\bsizzle\d*\b'], 'folders': ['sizzle'], 'exclude': []},
-    'Bell': {'patterns': [r'\bbell\d*\b'], 'folders': ['bell'], 'exclude': ['cowbell', 'ride', 'agogo']},
-    'Cymbal': {'patterns': [r'\bcymbal\d\b'], 'folders': [], 'exclude': ['crash', 'ride', 'china', 'splash', 'sizzle', 'bell']},  # Only cymbal[0-9].wav
-    'Clap': {'patterns': [r'\bclap\d*\b'], 'folders': ['clap'], 'exclude': []},
-    'Rim': {'patterns': [r'\brim(?:shot)?\d*\b'], 'folders': ['rim', 'rimshot'], 'exclude': ['conga', 'bongo', 'timbale', 'tom', 'berimbau', 'snare', 'clav', 'tamb', 'caixa', 'drum']},
-    'Cowbell': {'patterns': [r'\bcowbell\d*\b'], 'folders': ['cowbell'], 'exclude': ['vocal', 'vox', 'bongo', 'timbale', 'metal', 'drum']},
-    'Clave': {'patterns': [r'\bclav[e]?\d*\b'], 'folders': ['clav'], 'exclude': ['metal']},
-    'Cabasa': {'patterns': [r'\bcabasa\d*\b'], 'folders': ['cabasa'], 'exclude': ['drum']},
-    'Shaker': {'patterns': [r'\bshaker\d*\b'], 'folders': ['shaker'], 'exclude': []},
-    'Tambourine': {'patterns': [r'\btamb(?:ourine)?\d*\b'], 'folders': ['tamb'], 'exclude': []},
-    'Triangle': {'patterns': [r'\btriangle\d*\b'], 'folders': ['triangle'], 'exclude': []},
-    'Woodblock': {'patterns': [r'\bwood\s?block\d*\b'], 'folders': ['woodblock'], 'exclude': ['vocal', 'vox', 'drum']},
-    'Whistle': {'patterns': [r'\bwhistle\d*\b'], 'folders': ['whistle'], 'exclude': []},
-    'Cuica': {'patterns': [r'\bcuica\d*\b'], 'folders': ['cuica'], 'exclude': []},
-    'Agogo': {'patterns': [r'\bagogo\d*\b'], 'folders': ['agogo'], 'exclude': ['fx', 'bell']},
-    'Vibraslap': {'patterns': [r'\bvibraslap\d*\b'], 'folders': ['vibraslap'], 'exclude': []},
-    'Guiro': {'patterns': [r'\bguiro\d*\b'], 'folders': ['guiro'], 'exclude': []},
-    'Conga': {'patterns': [r'\bconga\d*\b'], 'folders': ['conga'], 'exclude': ['rim']},
-    'Bongo': {'patterns': [r'\bbongo\d*\b'], 'folders': ['bongo'], 'exclude': ['rim', 'fx']},
-    'Timbale': {'patterns': [r'\btimbale\d*\b'], 'folders': ['timbale'], 'exclude': ['rim']},
-    'Maracas': {'patterns': [r'\bmaracas?\d*\b'], 'folders': ['maraca'], 'exclude': []},
-    'Timpani': {'patterns': [r'\btimpani\d*\b'], 'folders': ['timpani'], 'exclude': []},
-    'Metal': {'patterns': [r'\bmetal\d*\b'], 'folders': ['metal'], 'exclude': ['bell', 'cymbal', 'hat', 'clave']},
-    'Perc': {'patterns': [r'\bperc\d+\b'], 'folders': [], 'exclude': ['kick', 'snare', 'tom', 'hat', 'crash', 'ride', 'clap', 'rim', 'conga', 'bongo', 'clave']},
-    'FX': {
-        'patterns': [r'\b(?:fx|sfx|se_fx|noise|noiz|effect|thang|sweep|riser?|falls?|whoosh|glitch|hits?|impact|laser|pops?|revs?|reverse|zaps?|scratch|swish|swoop|buzz|crackle|hiss|static|whine|drones?|morph|transform|twist|warp|winds?|shine|sparkle|texture|atmosphere|space|special|filter|modulate|guns?|zips?|booms?|bangs?|clanks?|clangs?|clash|fizz|hums?|pews?|plinks?|plunks?|sizzle|thunder|tings?|tinkle|twangs?|whomps?)\d*\b'],
-        'folders': ['fx', 'sfx', 'effect'],
-        'exclude': ['kick', 'bass', 'snare', 'tom', 'hat', 'crash', 'ride', 'clap', 'vocal', 'vox']
+    'Kick': {
+        'required_tokens': [r'\bkick\b', r'\bkik\b', r'\bass\s?drum\b'],  # bd = bass drum
+        'forbidden_tokens': ['snare', 'snr', 'tom', 'hat', 'crash', 'ride', 'metal', 'clap', 'rim'],
+        'description': 'Bass drum / kick drum samples'
     },
-    'Vox': {
-        'patterns': [r'\b(?:vox|vocal|voice|sings?|sung|screams?|shouts?|talks?|speech|chants?|choirs?|chorus|verse|words?|lyrics?|breaths?|humans?|males?|females?|heys?|ahs?|yeahs?|ohs?|oohs?|aahs?|mmms?|whispers?|growls?|grunts?|hums?|speaks?|yells?)\d*\b'],
-        'folders': ['vox', 'vocal', 'voice'],
-        'exclude': ['kick', 'snare', 'tom', 'hat', 'crash', 'ride']
+    'Bass': {
+        'required_tokens': [r'\bbass\d*\b', r'\bsub?bass\d*\b', r'\bsubkick\b', r'\bsub?kick\d*\b', r'\b(?:synth)\s?bass\d*\b', r'\bass(?:hit)\d*\b', r'\b(?:sub)\s?bass\d*\b'],
+        'forbidden_tokens': ['drum', 'snare', 'tom', 'hat', 'crash', 'ride', 'perc', 'fx', '&'],
+        'description': 'Bass samples'
+    },
+    'Snare': {
+        'required_tokens': [r'\bsnare?\b', r'\bsnr\b', r'\bsnaredrum\b', r'\bsnare\s?drum\b'],
+        'forbidden_tokens': ['kick', 'tom', 'rim', 'clap', 'metal', 'conga', 'bongo', 'timbale'],
+        'description': 'Snare drum samples'
+    },
+    'Tom': {
+        'required_tokens': [r'\btom\b'],
+        'forbidden_tokens': ['kick', 'snare', 'rim', 'atom', 'custom', 'bottom'],
+        'description': 'Tom drum samples'
+    },
+    'Hihat': {
+        'required_tokens': [r'\bhihat\b', r'\bhi-hat\b', r'\bhi\s?hat\b', r'\bchh\b', r'\bohh\b', r'\bhat\b'],
+        'forbidden_tokens': ['kick', 'snare', 'tom', 'crash', 'ride', 'cymbal', 'chat'],  # chat = Charleston (French for hihat, but ambiguous)
+        'description': 'Hi-hat cymbal samples'
+    },
+    'Crash': {
+        'required_tokens': [r'\bcrash\b', r'\bcrash\s?cymbal\b'],
+        'forbidden_tokens': ['ride', 'china', 'splash', 'sizzle', 'bell', 'hat'],
+        'description': 'Crash cymbal samples'
+    },
+    'Ride': {
+        'required_tokens': [r'\bride\b'],
+        'forbidden_tokens': ['crash', 'china', 'splash', 'bell', 'hat'],
+        'description': 'Ride cymbal samples'
+    },
+    'China': {
+        'required_tokens': [r'\bchina\b'],
+        'forbidden_tokens': ['crash', 'ride', 'splash'],
+        'description': 'China cymbal samples'
+    },
+    'Splash': {
+        'required_tokens': [r'\bsplash\b'],
+        'forbidden_tokens': ['crash', 'ride', 'china', 'sizzle'],
+        'description': 'Splash cymbal samples'
+    },
+    'Bell': {
+        'required_tokens': [r'\bbell\b'],
+        'forbidden_tokens': ['cowbell', 'ride', 'agogo', 'cymbal', 'crash'],
+        'description': 'Cymbal bell samples (NOT cowbell)'
+    },
+    'Cymbal': {
+        'required_tokens': [r'\bcymbal\d+\b'],  # Only numbered cymbals like cymbal1, cymbal2
+        'forbidden_tokens': ['crash', 'ride', 'china', 'splash', 'hihat', 'hat', 'bell'],
+        'description': 'Generic numbered cymbal samples'
+    },
+    'Clap': {
+        'required_tokens': [r'\bclap\b'],
+        'forbidden_tokens': ['snare', 'kick', 'rim'],
+        'description': 'Handclap samples'
+    },
+    'Rim': {
+        'required_tokens': [r'\brim\b', r'\brimshot\b'],
+        'forbidden_tokens': ['snare', 'tom', 'kick', 'conga', 'bongo', 'timbale', 'prim', 'trim', 'grim'],
+        'description': 'Rimshot samples'
+    },
+    'Cowbell': {
+        'required_tokens': [r'\bcowbell\b'],
+        'forbidden_tokens': ['bell', 'agogo', 'metal'],
+        'description': 'Cowbell samples'
+    },
+    'Clave': {
+        'required_tokens': [r'\bclav[e]?\b'],
+        'forbidden_tokens': ['metal', 'wood', 'drum'],
+        'description': 'Clave samples'
+    },
+    'Cabasa': {
+        'required_tokens': [r'\bcabasa\b'],
+        'forbidden_tokens': [],
+        'description': 'Cabasa samples'
+    },
+    'Shaker': {
+        'required_tokens': [r'\bshaker\b'],
+        'forbidden_tokens': ['maraca'],
+        'description': 'Shaker samples'
+    },
+    'Tambourine': {
+        'required_tokens': [r'\btamb(?:ourine)?\b', r'\btamborine\b'],
+        'forbidden_tokens': ['timbale', 'cymbal'],
+        'description': 'Tambourine samples'
+    },
+    'Triangle': {
+        'required_tokens': [r'\btriangle\b'],
+        'forbidden_tokens': [],
+        'description': 'Triangle samples'
+    },
+    'Woodblock': {
+        'required_tokens': [r'\bwood\s?block\b', r'\bwoodblk\b'],
+        'forbidden_tokens': ['drum'],
+        'description': 'Woodblock samples'
+    },
+    'Whistle': {
+        'required_tokens': [r'\bwhistle\b'],
+        'forbidden_tokens': [],
+        'description': 'Whistle samples'
+    },
+    'Cuica': {
+        'required_tokens': [r'\bcuica\b'],
+        'forbidden_tokens': [],
+        'description': 'Cuica samples'
+    },
+    'Agogo': {
+        'required_tokens': [r'\bagogo\b'],
+        'forbidden_tokens': ['bell'],
+        'description': 'Agogo bell samples'
+    },
+    'Vibraslap': {
+        'required_tokens': [r'\bvibraslap\b', r'\bvibra-slap\b'],
+        'forbidden_tokens': [],
+        'description': 'Vibraslap samples'
+    },
+    'Guiro': {
+        'required_tokens': [r'\bguiro\b'],
+        'forbidden_tokens': [],
+        'description': 'Guiro samples'
+    },
+    'Conga': {
+        'required_tokens': [r'\bconga\b'],
+        'forbidden_tokens': ['rim', 'bongo'],
+        'description': 'Conga drum samples'
+    },
+    'Bongo': {
+        'required_tokens': [r'\bbongo\b'],
+        'forbidden_tokens': ['rim', 'conga'],
+        'description': 'Bongo drum samples'
+    },
+    'Timbale': {
+        'required_tokens': [r'\btimbale\b', r'\btimbal\b'],
+        'forbidden_tokens': ['rim', 'tambourine', 'tamb'],
+        'description': 'Timbale drum samples'
+    },
+    'Maracas': {
+        'required_tokens': [r'\bmaraca[s]?\b'],
+        'forbidden_tokens': ['shaker'],
+        'description': 'Maracas samples'
+    },
+    'Timpani': {
+        'required_tokens': [r'\btimpani\b', r'\bkettle\s?drum\b'],
+        'forbidden_tokens': [],
+        'description': 'Timpani samples'
+    },
+    'Metal': {
+        'required_tokens': [r'\bmetal\b'],
+        'forbidden_tokens': ['bell', 'cymbal', 'hat', 'clave', 'cowbell', 'agogo', 'crash', 'ride'],
+        'description': 'Generic metal percussion'
+    },
+    'Perc': {
+        'required_tokens': [r'\bperc\d+\b'],  # Only numbered perc like perc1, perc2
+        'forbidden_tokens': ['kick', 'snare', 'tom', 'hat', 'crash', 'ride', 'clap'],
+        'description': 'Generic numbered percussion samples'
+    },
+    'Sizzle': {
+        'required_tokens': [r'\bsizzle\b'],
+        'forbidden_tokens': ['crash', 'ride', 'splash'],
+        'description': 'Sizzle cymbal samples'
     },
 }
 
@@ -52,18 +175,45 @@ source_dir = Path('/Users/Gilby/complete_drum_archive')
 target_dir = Path('/Users/Gilby/Projects/MLAudioClassifier/TrainingData/AudioSamples')
 
 def matches_category(filename, cat_config):
+    """
+    Match using canonical keys:
+    - required_tokens: list of regex patterns (must match at least one)
+    - forbidden_tokens: list of plain substrings (if any present -> reject)
+    """
     name_lower = filename.lower()
     # Exclude combo samples with "&"
-    if ' & ' in filename or '&' in filename:
+    if '&' in filename:
         return False
-    if any(term in name_lower for term in cat_config['exclude']):
-        return False
-    return any(re.search(pattern, name_lower) for pattern in cat_config['patterns'])
+
+    # Reject if any forbidden token (substring) is present
+    for term in cat_config.get('forbidden_tokens', []):
+        if term and term in name_lower:
+            return False
+
+    # Accept if any required regex pattern matches
+    for pattern in cat_config.get('required_tokens', []):
+        try:
+            if re.search(pattern, name_lower):
+                return True
+        except re.error:
+            # ignore malformed pattern and continue
+            continue
+
+    return False
 
 def is_category_folder(folder_name, cat_config):
+    """
+    Check folder name for required token patterns as a fallback.
+    Uses same required_tokens patterns (word-boundary aware regex expected).
+    """
     name_lower = folder_name.lower()
-    # Use word boundaries for folder matching too
-    return any(re.search(r'\b' + re.escape(term) + r'\b', name_lower) for term in cat_config['folders'])
+    for pattern in cat_config.get('required_tokens', []):
+        try:
+            if re.search(pattern, name_lower):
+                return True
+        except re.error:
+            continue
+    return False
 
 def main():
     for cat in CATEGORIES:

@@ -1,0 +1,1 @@
+After edits, ensure notebooks/scripts reference correct absolute paths, regenerate documentation if touched, and manually verify key scripts (e.g., python scripts/setup_directories.py) run without errors. No automated tests present; rely on targeted script execution or notebook runs as validation.

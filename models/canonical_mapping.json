@@ -1,0 +1,32 @@
+{
+    "model_class_to_canonical": {
+        "Agogo": "Agogo",
+        "Bell": "Bell",
+        "Bongo": "Bongo",
+        "Cabasa": "Cabasa",
+        "China": "China",
+        "Clap": "Clap",
+        "Clave": "Clave",
+        "Conga": "Conga",
+        "Cowbell": "Cowbell",
+        "Cuica": "Cuica",
+        "Cymbal": "Cymbal",
+        "FX": "FX",
+        "Guiro": "Guiro",
+        "Maracas": "Maracas",
+        "Metal": "Metal",
+        "Noise": "FX",
+        "Perc": "Perc",
+        "Reverse": "FX",
+        "Rim": "Rim",
+        "Shaker": "Shaker",
+        "Sizzle": "Sizzle",
+        "Splash": "Splash",
+        "Tambourine": "Tambourine",
+        "Timbale": "Timbale",
+        "Timpani": "Timpani",
+        "Triangle": "Triangle",
+        "Vibraslap": "Vibraslap",
+        "Vox": "Vox"
+    }
+}

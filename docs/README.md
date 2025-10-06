@@ -1,138 +1,335 @@
-  <h3 align="center">Automatic Drum Sample Labelling with Machine Learning</h3>
+# MLAudioClassifier
 
-  <p align="center">
-    Classifying short recordings of percussion instruments with a CNN trained on spectral features.
-    <br />
-    <br />
-    <br />
-    <a href="#usage">View Demo</a>
-    ·
-    <a href="https://github.com/uf-eel6825-sp23/MLAudioClassifier/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/uf-eel6825-sp23/MLAudioClassifier/issues">Request Feature</a>
-  </p>
-</p>
+Classify drum and percussion one-shots with a pair of deep learning pipelines backed by rigorously curated datasets. This README consolidates the full project knowledge base: data sources, strict curation scripts, notebooks, models, workflow, troubleshooting, and supporting documentation.
 
-<!-- TABLE OF CONTENTS -->
-<details open="open">
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#dependencies">Dependencies</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#authors">Authors</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
-  </ol>
-</details>
+- 🎯 **Purpose**: Label short percussion recordings and sort sample libraries automatically.
+- 🧠 **Models**: CNN classifier trained on MFCC features and an autoencoder-assisted classifier.
+- 🗂️ **Data Pipeline**: EXTREMELY STRICT filename-based curation yields high-precision training and test splits.
+- 📦 **Artifacts**: Saved Keras weights, MFCC datasets, TensorBoard logs, accuracy/loss plots.
+- 📚 **Docs & Scripts**: Comprehensive guides for strict classification, workflow automation, and archive analysis.
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+## Table of Contents
 
-This is my final project for the EEL6825 Pattern Recognition course at the University of Florida. I developed a neural network classifier to identify the percussion instrument present in an audio file. This will be useful for music producers who, rather than recording instruments with a microphone, might be working with prerecorded samples of a drum kit. Running the code here will label all the files in a library of one-shot drum recordings and organize them into folders based on what instrument is identified. To train and test this model I gathered a custom dataset from free sample packs I found on the internet, either through individual producers or music software companies. The neural network architecture I am using is based on a paper by Mahanta et al. published in 2021. (1) I am also using an autoencoder to extract features from the spectrograms of the audio files, which I based on a design from a blog post on the Keras website. (2)
+1. [Project Snapshot](#project-snapshot)
+2. [Environment & Setup](#environment--setup)
+3. [Strict Dataset Pipeline](#strict-dataset-pipeline)
+4. [Training & Evaluation Workflow](#training--evaluation-workflow)
+5. [Classification Workflows](#classification-workflows)
+6. [Repository Map](#repository-map)
+7. [Scripts Reference](#scripts-reference)
+8. [Notebooks](#notebooks)
+9. [Data Highlights](#data-highlights)
+10. [Results & Monitoring](#results--monitoring)
+11. [Troubleshooting](#troubleshooting)
+12. [Documentation & Resources](#documentation--resources)
+13. [License & Attribution](#license--attribution)
 
-For more information, please see my paper on this subject:
+## Quick Start (Production)
 
-[Automated Classification of Drum Sounds for Modern Music Production](https://github.com/nathanheck255/MLAudioClassifier/blob/main/PatternRecognitionProjectReport.pdf)
+**Ready to classify your drum archive?** The project now includes a production-ready CLI:
 
-See my video explanation here:
-<https://youtu.be/V31PLUZOtdc>
+```bash
+# 1. Activate environment
+source .venv/bin/activate
 
-or any of these other resources which informed my implementation of this model:
+# 2. Run full archive inference (~4 min for 47K files)
+python -m classifier.cli infer --config config.yml
 
-(1) S. Mahanta, A. Khilji, P. Pakray, “Deep Neural Network for Musical Instrument Recognition Using MFCCs,” in Computation and Systems, vol. 25, pp. 351–360, Nov. 2021
+# 3. Generate organized archive
+python -m classifier.cli rebuild \
+  --index ClassifiedArchive/run_<timestamp>/index.jsonl \
+  --out RegeneratedArchive
+```
 
-(2) F. Chollet, “Building Autoencoders in Keras,” The Keras Blog, 14-May-2016.
+**Result:** `RegeneratedArchive/{Crash,Hihat,Kick,Ride,Snare,Tom,misc}/` with comprehensive manifests.
 
-(3) K.D. Martin, Sound-Source Recognition: A Theory and Computational Model, May 1999.
+📖 **See [`QUICKSTART.md`](../QUICKSTART.md) for complete usage guide.**
 
-<!-- GETTING STARTED -->
-## Getting Started
+## Project Snapshot
 
-Please clone this repository first, and then before running any of the code you must unzip the training data and test data archive files. The test data is small enough that I could include it directly in this repo, but the training data is too large, so I had to attach it to the assignment on Canvas. You'll have to download it from there and then copy it inside this repo.
+| Item | Details |
+| --- | --- |
+| Core Task | Multi-class classification of drum/percussion one-shots |
+| Classes | **34-class full taxonomy** with canonical collapse to 6 core drums (Crash, Hihat, Kick, Ride, Snare, Tom) + misc |
+| Feature Representation | 40-coefficient MFCCs extracted from 50,000-sample, 44.1 kHz mono clips |
+| Models | `model1` (34-class CNN), `model2` (6-class autoencoder), `encoder` (shared feature extractor) |
+| Architecture | **Two-phase pipeline**: inference → JSONL index → organized archive |
+| Evaluation | Strict `TestData/` split (18 categories, 810 files) + saved accuracy/loss curves |
+| Production Usage | **CLI package** with streaming, deduplication, configuration, and regeneration |
+| Output | Organized archives: `{Crash,Hihat,Kick,Ride,Snare,Tom,misc}/` + manifests + statistics |
 
-### Dependencies
+## Environment & Setup
 
-The two main libraries I used in my model design were Keras for the neural network architecture and Librosa for the audio processing. I used a bunch of other libraries too like Numpy, MatPlotLib, etc. These are all fairly popular, so you should not have to do any special installations before running my code. Just make sure you run it on HiperGator using the UFRC Python-3.10 kernel and you won't have any problems.
+1. **Clone the repository** and ensure you are working from the project root:
 
-### Installation
-
-1. Clone the repo
-
-   ```sh
-   git clone https://github.com/uf-eel6825-sp23/MLAudioClassifier.git
+   ```bash
+   git clone <your-fork-url>
+   cd MLAudioClassifier
    ```
 
-But if you are using HiperGator then you might need to clone with ssh:
+2. **Python environment**: Python 3.10+ with TensorFlow/Keras, Librosa, NumPy, Pandas, Matplotlib, and Jupyter.
+3. **Verify directory scaffold** (creates `complete_drum_archive/` and checks strict dataset folders):
 
-   ```sh
-   git clone git@github.com:uf-eel6825-sp23/MLAudioClassifier.git
+   ```bash
+   python3 scripts/setup_directories.py
    ```
 
-2. cd into the repo
+4. **Source data**: Place the vendor-organized `complete_drum_archive/` (20,086 samples across 34 categories) inside the repo root. See `docs/ARCHIVE_ORGANIZATION.md` for counts per instrument group.
 
-3. Copy the training data files from Canvas into the repo:
-TrainingData.zip and mfcc_train_data.json
+## Strict Dataset Pipeline
 
-<!-- USAGE EXAMPLES -->
-## Usage
+The strict pipeline enforces explicit filename tokens, forbidden token filters, ambiguity rejection, and reproducible logging. Quick-reference commands live in `STRICT_POPULATE_README.md`; rules are detailed in `docs/STRICT_CLASSIFICATION_GUIDE.md`.
 
-This project is made up of 4 Jupyter notebooks. I have included some saved, pretrained models in here so you could technically just run the Model_Evaluation.ipynb notebook if you want to get straight to the results. But if you want to run through every part of the model, this is the sequence that they should be executed:
+### 1. Build `TrainingData/AudioSamples/`
 
-1. MFCC_Feature_Extractor.ipynb
-2. Model1_Train.ipynb
-3. Model2_Train.ipynb
-4. Model_Evaluation.ipynb
+```bash
+# 1. Preview classifications (no copying)
+python3 scripts/strict_populate_training.py --validate-only
 
-I also checked in a fifth notebook called PracticalDemo.ipynb, which I used to demonstrate the model's capabilities in my video presentation.
+# 2. Capture accepted/rejected logs in logs/
+python3 scripts/strict_populate_training.py --validate-only --save-logs
 
-<!-- ROADMAP -->
-## Roadmap
+# 3. Copy strict matches into TrainingData (cleans folders first)
+python3 scripts/strict_populate_training.py --copy
+```
 
-This model is now capable of classifying six classes of instruments: crash cymbal, hi-hat, kick drum, ride cymbal, snare drum, and tom. The expanded scope now includes all the major percussion instruments commonly found in drum kits. In the future I would like to improve on this model by trying out other neural network architectures and feature extraction methods. I will keep experimenting with that and pushing updates to this repo as I make progress.
+- Acceptance snapshot (Oct 2025 run): 46,962 files scanned → 10,791 accepted (~23%) across 34 strict categories.
+- Optional audits: `python3 scripts/deep_folder_analysis.py` and `python3 scripts/inspect_catchment.py` surface crossover tokens and ambiguous names.
+- Need a broader sweep? Use `python3 scripts/organize_drum_archive.py` (folder-aware, less strict).
 
-As a long term goal for this project, I could see this running on the back end of a virtual instrument sampler plugin. As a first step towards that, I could try to write some scripts that can be called my digital audio workstation upon startup to scan my sample library and pass them through a pretrained model.
+### 2. Build `TestData/`
 
-<!-- CONTRIBUTING -->
-## Contributing
+```bash
+python3 scripts/populate_test_data.py
+```
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+- Target: ≈20% sample per category (max 100 files) requiring ≥50 strict matches.
+- Outcome (see `TEST_DATA_SUMMARY.md`): 18 categories populated, 810 samples total.
+  - Core kit: Kick/Snare/Tom (100 each), Hihat (46), Crash (38), Ride (36)
+  - Percussion highlights: Perc (96), Clap (74), Rim (37), Cowbell (26), Bell (16)
+  - Skipped when strict matches <50: Cabasa, Clave, Agogo, Guiro, China, Splash, Whistle, Cuica, Woodblock, Metal, Timpani, Vibraslap
+- Adjust thresholds by editing `scripts/populate_test_data.py` (`min_needed` check) if you need lower counts.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## Training & Evaluation Workflow
 
-<!-- LICENSE -->
-## License
+1. **Feature Extraction** – `notebooks/MFCC_Feature_Extractor.ipynb`
+   - Inputs: `TrainingData/AudioSamples/`, `TestData/`
+   - Outputs: `data/mfcc_train_data.json`, `data/mfcc_test_data.json`
 
-Distributed under the MIT License. See `LICENSE` for more information.
+2. **Train Model 1** – `notebooks/Model1_Train.ipynb`
+   - Direct MFCC CNN (6-class by default)
+   - Saves `models/model1.keras`, `models/model1_history.json`, TensorBoard logs (if enabled)
 
-<!-- Authors -->
-## Authors
+3. **Train Model 2** – `notebooks/Model2_Train.ipynb`
+   - Autoencoder encoder + classifier
+   - Saves `models/encoder.keras`, `models/model2.keras`, `models/model2_history.json`
 
-Nathan Heck - [@hexmusiclabs](https://www.instagram.com/hexmusiclabs/) - <nathan.heck@ufl.edu> - <hexmusiclabs@gmail.com>
+4. **Evaluate** – `notebooks/Model_Evaluation.ipynb`
+   - Generates accuracy/loss plots (`results/*.png`)
+   - Produces confusion matrices for the 6-class drum kit problem
 
-Project Link: [https://github.com/uf-eel6825-sp23/MLAudioClassifier](https://github.com/uf-eel6825-sp23/MLAudioClassifier)
+5. **Monitor** – Load TensorBoard with `logs/train/` to inspect training runs.
 
-<!-- ACKNOWLEDGEMENTS -->
-## Acknowledgements
+## Classification Workflows
 
-You can acknowledge any individual, group, institution or service.
+### Production Classifier Package (Recommended)
 
-* [Catia Silva](https://faculty.eng.ufl.edu/catia-silva/)
-* [The Keras Blog](https://blog.keras.io/)
-* [UF ECE Department](https://www.ece.ufl.edu/)
+The project now includes a production-ready CLI classifier with two-phase pipeline architecture for maximum flexibility and performance:
 
-## Thank you
+**Phase 1: Inference (Generate Index)**
+
+```bash
+# Activate environment
+source .venv/bin/activate
+
+# Run full archive inference
+python -m classifier.cli infer --config config.yml
+
+```
+
+- Processes complete_drum_archive (~47K files in ~4 minutes)
+- Outputs streaming JSONL index: `ClassifiedArchive/run_<timestamp>/index.jsonl`
+- Includes per-file predictions, confidence, audio metadata, and deduplication
+
+**Phase 2: Rebuild (Organize Archive)**
+
+```bash
+# Generate organized archive from index
+python -m classifier.cli rebuild \
+
+  --index ClassifiedArchive/run_<timestamp>/index.jsonl \
+  --out RegeneratedArchive
+```
+
+- Instant reorganization without re-inference
+
+- Outputs: `RegeneratedArchive/{Crash,Hihat,Kick,Ride,Snare,Tom,misc}/`
+- Includes manifests and summary statistics
+
+**Additional Commands:**
+
+```bash
+# View classification statistics
+python -m classifier.cli stats --index ClassifiedArchive/run_<timestamp>/index.jsonl
+
+# Validate label mapping
+python -m classifier.cli validate-mapping
+
+
+# Create label mapping template
+python -m classifier.cli create-stub
+```
+
+**Key Features:**
+
+- **34-class model** with canonical collapse to 6 core drums + misc
+- **Hash-based deduplication** prevents processing identical files
+- **Configurable thresholds** for confidence-based routing
+
+- **Override support** for manual corrections
+- **Comprehensive logging** with error cause tracking
+
+### Interactive Notebooks
+
+#### Practical Demo (`notebooks/PracticalDemo.ipynb`)
+
+1. Drop unsorted `.wav` files into `complete_drum_archive/`.
+2. Choose a trained model (Model 1 or Model 2) within the notebook.
+
+3. Execute cells to normalize audio, extract MFCCs, predict, and sort outputs.
+4. Results land in `ClassifiedArchive/<Instrument>/` with confidence in filenames.
+
+#### Archive Experiments (`notebooks/ArchiveClassifier.ipynb`)
+
+Enhanced notebook with mirror directory structure support and dynamic label loading. Configure paths per notebook instructions.
+
+#### Utility Notebooks
+
+- **`ValidateMapping.ipynb`** - Check label mapping against model output
+- **`ExtractTrainingLabels.ipynb`** - Recover training label order from data
+- **`TestClassifier.ipynb`** - Test classifier package functionality
+
+## Repository Map
+
+| Path | Purpose |
+| --- | --- |
+| `classifier/` | **Production classifier package** with CLI, streaming JSONL, and two-phase pipeline |
+| `ClassifiedArchive/` | JSONL index files and organized archive outputs |
+| `complete_drum_archive/` | Vendor-organized master archive (source for strict scripts) |
+| `config.yml` | **Centralized YAML configuration** for classifier package |
+| `data/` | Serialized MFCC datasets (`mfcc_train_data.json`, `mfcc_test_data.json`) |
+| `docs/` | Documentation (workflow, strict guide, archive stats, project structure, academic report) |
+| `logs/train/` | TensorBoard event files for recent training sessions |
+| `models/` | Saved Keras weights, **label mappings**, and canonical collapse rules |
+| `notebooks/` | Pipeline notebooks (training, evaluation, demos) + **new utility notebooks** |
+| `results/` | Accuracy/loss curve images for quick comparison |
+| `scripts/` | Python/shell utilities for strict curation, analysis, scaffolding, and notebook maintenance |
+| `TestData/` | Strict evaluation split (18 categories, 810 samples) populated via `populate_test_data.py` |
+| `TrainingData/AudioSamples/` | Strict training dataset (≈10.8k samples across 34 categories) |
+| `QUICKSTART.md`, `IMPLEMENTATION_STATUS.md` | **Production usage guides** and technical documentation |
+
+## Scripts Reference
+
+### Production Classifier CLI
+
+| Command | Description |
+| --- | --- |
+| `python -m classifier.cli infer` | **Run full archive inference** with streaming JSONL output and deduplication |
+| `python -m classifier.cli rebuild` | **Regenerate organized archive** from existing index with configurable parameters |
+| `python -m classifier.cli stats` | **View classification statistics** (distribution, confidence, duration, errors) |
+| `python -m classifier.cli validate-mapping` | **Check label mapping** against model output dimension |
+| `python -m classifier.cli create-stub` | **Generate label mapping template** for manual editing |
+
+### Utility Scripts
+
+| Script | Description |
+| --- | --- |
+| `strict_populate_training.py` | EXTREMELY STRICT dataset builder with validation mode, logging, copy, and configurable source/target paths |
+| `populate_test_data.py` | Creates strict TestData subset with explicit token checks and quota enforcement |
+| `organize_drum_archive.py` | Original folder-aware archive copier (less strict, higher recall) |
+| `extract_training_labels.py` | **Recover training label order** from MFCC JSON or directory structure |
+| `validate_mapping.py` | **Standalone label validation** with auto-stub creation |
+| `test_classifier.py` | **Test classifier package** functionality (imports, discovery, features, model) |
+
+| `deep_folder_analysis.py` | Reports cross-category token collisions inside `TrainingData/AudioSamples/` |
+| `inspect_catchment.py` | Samples ambiguous filenames to spot potential misclassifications |
+| `setup_directories.py` | Initializes `complete_drum_archive/` and verifies training/test directories with instrument counts |
+| `update_notebook_paths.py` | Rewrites notebook asset paths to match the current repo structure |
+| `run_strict_examples.sh` | Interactive shell walkthrough of strict population commands |
+
+## Notebooks
+
+### Training & Evaluation
+
+| Notebook | Role |
+| --- | --- |
+| `MFCC_Feature_Extractor.ipynb` | Generate MFCC feature datasets for training and evaluation |
+| `Model1_Train.ipynb` | Train CNN classifier directly on MFCC features |
+
+| `Model2_Train.ipynb` | Train autoencoder encoder + classifier stack |
+| `Model_Evaluation.ipynb` | Compare model performance, produce confusion matrices & plots |
+
+### Classification & Demos
+
+| Notebook | Role |
+| --- | --- |
+| `PracticalDemo.ipynb` | Sort unsorted sample libraries using trained models |
+| `ArchiveClassifier.ipynb` | Large-scale archive classification experiments (enhanced with mirroring) |
+
+### Utilities & Validation
+
+| Notebook | Role |
+| --- | --- |
+| `ValidateMapping.ipynb` | **Check label mapping** against model output dimension |
+| `ExtractTrainingLabels.ipynb` | **Recover training labels** from MFCC JSON or directory structure |
+| `TestClassifier.ipynb` | **Test classifier package** functionality with visual pass/fail results |
+
+## Data Highlights
+
+- **Archive Counts** (`docs/ARCHIVE_ORGANIZATION.md`):
+  - Drum Kit (6 categories): Kick 2,427 · Snare 3,996 · Tom 3,084 · Hihat 1,408 · Crash 489 · Ride 667
+  - Cymbals (4 categories): China 56 · Splash 39 · Cymbal 666 · Sizzle 4 · Bell 382
+  - Hand Percussion (6 categories): Clap 800 · Tambourine 155 · Shaker 218 · Maracas 80 · Cabasa 118 · Triangle 91
+  - Latin/World (6 categories): Conga 525 · Bongo 227 · Timbale 130 · Clave 186 · Agogo 84 · Guiro 96
+  - Melodic/Pitched (5 categories): Cowbell 188 · Woodblock 59 · Timpani 33 · Metal 33 · Rim 482
+  - Special/Sound Design: Perc 865 · Whistle 68 · Cuica 49 · Vibraslap 24 · FX 2,073 · Vox 284
+- **Strict TestData Snapshot** (`TEST_DATA_SUMMARY.md`): Balanced draw emphasizing 6-class core kit + key percussion, with thresholds to avoid noisy categories.
+- **Classification Naming**: `{instrument}_{confidence}_{original_name}.wav` (e.g., `kick_0.923_BD_001.wav`).
+
+## Results & Monitoring
+
+- Training metrics saved under `results/` (`accuracy.png`, `loss.png`, `model2_accuracy.png`, `model2_loss.png`).
+- TensorBoard event logs (`logs/train/events.out.tfevents.*`) provide epoch-by-epoch inspection. Launch with:
+
+  ```bash
+  tensorboard --logdir logs/train
+  ```
+
+- `ClassifiedArchive/metadata/` (when enabled) stores per-file predictions and confidences for downstream QA.
+
+## Troubleshooting
+
+| Issue | Likely Cause | Fix |
+| --- | --- | --- |
+| No files copied by strict script | Filenames missing explicit tokens or hitting forbidden lists | Review rejection logs (`--save-logs`), adjust `STRICT_CATEGORIES`, or fall back to `organize_drum_archive.py` |
+| Missing TestData categories | Strict matches <50 | Lower the `min_needed` threshold in `populate_test_data.py` or expand TrainingData |
+| Notebook path errors | Running outside repo root | `cd /Users/Gilby/Projects/MLAudioClassifier` or run `update_notebook_paths.py` |
+| Low classification confidence | Distribution shift between complete_drum_archive and TrainingData | Add similar samples to TrainingData, rerun strict pipeline, regenerate MFCCs, retrain |
+| Slow strict run on huge archives | Processing >100k files | Run overnight or limit `--source` to subset directories |
+
+## Documentation & Resources
+
+- `docs/PROJECT_STRUCTURE.md` – Current repository layout and artefact overview
+- `docs/WORKFLOW_GUIDE.md` – Step-by-step instructions (mirrors this README with additional detail)
+- `docs/STRICT_CLASSIFICATION_GUIDE.md` – Token rules, forbidden lists, logging outputs, customization tips
+- `docs/ARCHIVE_ORGANIZATION.md` – Aggregate stats for the vendor archive
+- `TEST_DATA_SUMMARY.md` – Detailed population results for strict TestData
+- `STRICT_POPULATE_README.md` – Quick-start strict script commands
+- `docs/EXPANSION_NOTES.md` – Notes on expanding from 3 to 6 drum classes
+- `PatternRecognitionProjectReport.pdf` – Academic write-up
+
+## License & Attribution
+
+- Distributed under the MIT License – see `LICENSE` for details.
+- Original project by Nathan Heck (UF EEL6825 Pattern Recognition). Current iteration includes strict dataset tooling, extended documentation, and workflow automation maintained in this fork.
+- Acknowledgements: UF ECE Department, advisors, and the broader audio ML community whose open datasets inspired the archive.

@@ -1,0 +1,8 @@
+{
+  "Crash": 0,
+  "Hihat": 1,
+  "Kick": 2,
+  "Ride": 3,
+  "Snare": 4,
+  "Tom": 5
+}

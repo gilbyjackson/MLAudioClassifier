@@ -1,159 +1,147 @@
-# Complete Workflow: From Training to Classifying Unsorted Data
+# Complete Workflow: From Sourcing Samples to Strict Classification
 
 ## Overview
-This guide walks you through the complete process of training the model with sorted data and then using it to classify your unsorted data bank.
 
-## 📁 Data Structure Setup
+This guide mirrors the current end-to-end pipeline for MLAudioClassifier. It covers preparing strict training/test datasets from the master archive, training the neural networks, classifying fresh libraries, and monitoring results. All commands assume you start in the project root (`/Users/Gilby/Projects/MLAudioClassifier`).
 
-### Step 1: Organize Your Training Data
-Your training data should be organized like this:
-```
-TrainingData/AudioSamples/
-├── Crash/          # Crash cymbal samples
-├── Hihat/          # Hi-hat samples  
-├── Kick/           # Kick drum samples
-├── Ride/           # Ride cymbal samples
-├── Snare/          # Snare drum samples
-└── Tom/            # Tom drum samples
-```
+## 0. Prerequisites
 
-### Step 2: Prepare Unsorted Data Directory
-Create a `SampleLib/` folder for your unsorted samples:
-```
-SampleLib/          # Put all your unsorted .wav files here
-├── sample1.wav
-├── sample2.wav
-└── ...
-```
+- **Python environment**: Python 3.10+ with TensorFlow/Keras, Librosa, NumPy, Pandas, Matplotlib.
+- **Audio data**: The `complete_drum_archive/` vendor tree (20,086 curated samples across 34 categories as documented in `docs/ARCHIVE_ORGANIZATION.md`).
+- **Project folders**: Run the setup helper to ensure expected directories exist:
 
-### Step 3: Run Setup Script (Optional)
-```bash
-python setup_directories.py
-```
+  ```bash
+  python3 scripts/setup_directories.py
+  ```
 
-## 🎯 Training Pipeline
+  This creates `complete_drum_archive/` for unsorted clips and verifies `TrainingData/AudioSamples/` and `TestData/`.
 
-### Step 1: Extract Features
-Run `MFCC_Feature_Extractor.ipynb`:
-- Processes all audio files in `TrainingData/AudioSamples/`
-- Extracts MFCC features from each sample
-- Creates labeled dataset for training
-- Saves features to `mfcc_train_data.json` and `mfcc_test_data.json`
+## 1. Build Strict TrainingData
 
-### Step 2: Train Model
-Choose one (or both) training approaches:
+The EXTREMELY STRICT classifier enforces explicit filename tokens, forbidden token lists, and ambiguity rejection. Use `STRICT_POPULATE_README.md` for quick reference and `docs/STRICT_CLASSIFICATION_GUIDE.md` for exhaustive rules.
 
-**Option A: Model 1 (Direct MFCC Classification)**
-- Run `Model1_Train.ipynb`
-- Trains CNN directly on MFCC features
-- Saves trained model as `model.keras`
+1. **Dry-run validation** (no files copied):
 
-**Option B: Model 2 (Autoencoder + Classification)**  
-- Run `Model2_Train.ipynb`
-- Trains autoencoder for feature extraction
-- Trains classifier on encoded features
-- Saves `encoder.keras` and `model2.keras`
-
-### Step 3: Evaluate Performance (Optional)
-- Run `Model_Evaluation.ipynb`
-- Compares both models' performance
-- Generates confusion matrices
-
-## 🔄 Classification Pipeline
-
-### Step 4: Classify Unsorted Data
-Run `PracticalDemo.ipynb`:
-
-1. **Loads** your trained model
-2. **Processes** each `.wav` file in `SampleLib/`
-3. **Predicts** instrument class with confidence score
-4. **Organizes** files into folders:
-   ```
-   SampleLib/
-   ├── Crash/
-   │   └── crash_0.892_sample1.wav
-   ├── Hihat/
-   │   └── hihat_0.756_sample2.wav
-   ├── Kick/
-   ├── Ride/
-   ├── Snare/
-   └── Tom/
+   ```bash
+   python3 scripts/strict_populate_training.py --validate-only
    ```
 
-## 🎛️ Classification Details
+2. **Generate review logs** (accepted/rejected lists saved to `logs/`):
 
-### Input Processing
-- Loads audio at 44.1kHz, mono
-- Fixes length to 50,000 samples (~1.13 seconds)
-- Extracts 40 MFCC coefficients
-- Normalizes features
+   ```bash
+   python3 scripts/strict_populate_training.py --validate-only --save-logs
+   ```
 
-### Output Classes
-- **0**: Crash cymbal
-- **1**: Hi-hat
-- **2**: Kick drum  
-- **3**: Ride cymbal
-- **4**: Snare drum
-- **5**: Tom drum
+3. **Populate `TrainingData/AudioSamples/`** (cleans existing folders by default):
 
-### File Naming Convention
-Classified files are renamed with format:
-`{instrument}_{confidence}_{original_name}.wav`
+   ```bash
+   python3 scripts/strict_populate_training.py --copy
+   ```
 
-Example: `kick_0.923_BD_001.wav`
-- Instrument: kick
-- Confidence: 92.3%
-- Original: BD_001.wav
+   - Use `--no-clean` to append instead of replace.
+   - Add `--source` or `--target` to work with alternate paths.
+4. **Optional quality audits**:
+   - `python3 scripts/deep_folder_analysis.py` – report instrument-token crossovers per folder.
+   - `python3 scripts/inspect_catchment.py` – sample ambiguous filenames for spot checks.
 
-## 🔧 Troubleshooting
+Typical output after a fresh run (see `STRICT_POPULATE_README.md`):
 
-### Common Issues
+- ~46,962 files scanned
+- 10,791 strict matches accepted (≈23% acceptance)
+- 34 instrument categories populated (drum kit, cymbals, hand percussion, Latin/world, melodic/pitched, special, sound design)
 
-**"Model not found"**
-- Ensure you've run training notebooks first
-- Check that `model.keras` exists in project directory
+## 2. Derive Strict TestData
 
-**"SampleLib not found"**
-- Create `SampleLib/` folder
-- Add your unsorted `.wav` files to it
+`TestData/` holds an evaluation subset selected from TrainingData with even tighter thresholds (explicit tokens, maximum four-word names, category quotas).
 
-**Low classification confidence**
-- May indicate samples unlike training data
-- Consider adding similar samples to training set and retraining
+1. **Populate or refresh**:
 
-**Audio loading errors**
-- Ensure files are valid audio formats (.wav recommended)
-- Check sample rate and bit depth compatibility
+   ```bash
+   python3 scripts/populate_test_data.py
+   ```
 
-## 💡 Tips for Better Results
+   This cleans each strict category and copies up to 100 files (≈20% sample) if at least 50 strict matches exist.
+2. **Review the summary** in `TEST_DATA_SUMMARY.md`:
+   - 18 categories filled (810 total samples)
+   - Core kit categories reach 100 clips each (Kick, Snare, Tom)
+   - Cymbals/percussion populated to availability (e.g., Hihat 46, Crash 38, Ride 36, Perc 96, Bell 16, Rim 37)
+   - 12 categories skipped when strict matches < 50 (Cabasa, Clave, Agogo, Guiro, China, Splash, Whistle, Cuica, Woodblock, Metal, Timpani, Vibraslap)
+3. **Adjust thresholds** by editing `MIN_MATCHES` logic inside `scripts/populate_test_data.py` if you need more categories at lower sample counts.
 
-1. **Balanced Training Data**: Use roughly equal numbers of samples per class
-2. **Quality Training Data**: Use clean, representative samples
-3. **Consistent Audio Format**: Stick to same sample rate/bit depth
-4. **Review Low Confidence**: Manually check samples with confidence < 0.7
-5. **Retrain if Needed**: Add misclassified samples to training data and retrain
+## 3. Feature Extraction
 
-## 🚀 Advanced Usage
+Run the MFCC notebook to generate feature datasets used by both models:
 
-### Batch Processing
-For large datasets, consider modifying the classification loop to:
-- Process files in batches
-- Add progress bars
-- Log results to file
-- Handle different audio formats
+1. Launch Jupyter (or open in VS Code) and execute `notebooks/MFCC_Feature_Extractor.ipynb`.
+2. Ensure paths resolve to:
+   - Input: `TrainingData/AudioSamples/` and `TestData/`
+   - Output: `data/mfcc_train_data.json`, `data/mfcc_test_data.json`
+3. Confirm MFCCs use 40 coefficients, 50,000-sample waveform windows (≈1.13s), mono, 44.1 kHz.
 
-### Custom Confidence Thresholds
-Modify the demo to only move files above certain confidence:
-```python
-if confidence > 0.8:  # Only move high-confidence predictions
-    shutil.move(wav, destination)
-else:
-    print(f"Low confidence ({confidence:.3f}), keeping in unsorted")
-```
+## 4. Model Training
 
-### Integration with DAWs
-The classified samples can be easily imported into:
-- Ableton Live (drag folders to browser)
-- Logic Pro (add to sample library)
-- FL Studio (add to browser)
-- Pro Tools (import to workspace)
+### Option A – Model 1 (Direct MFCC CNN)
+
+1. Open `notebooks/Model1_Train.ipynb`.
+2. Train using the MFCC datasets (6-class configuration by default).
+3. Saved artefacts:
+   - `models/model1.keras`
+   - `models/model1_history.json`
+   - TensorBoard logs in `logs/train/` (if callbacks enabled)
+
+### Option B – Model 2 (Autoencoder + Classifier)
+
+1. Open `notebooks/Model2_Train.ipynb`.
+2. Train the autoencoder encoder plus downstream classifier.
+3. Saved artefacts:
+   - `models/encoder.keras`
+   - `models/model2.keras`
+   - `models/model2_history.json`
+
+Both notebooks can be run sequentially; they share the MFCC source data.
+
+## 5. Evaluation & Monitoring
+
+1. Execute `notebooks/Model_Evaluation.ipynb` to compare both models.
+   - Reads `data/mfcc_test_data.json` and all saved `.keras` weights.
+   - Generates confusion matrices for six drum-kit classes.
+   - Stores plots in `results/accuracy.png`, `results/loss.png`, `results/model2_accuracy.png`, `results/model2_loss.png`.
+2. Inspect TensorBoard dashboards by pointing to `logs/train/` for deeper training diagnostics.
+
+## 6. Classification Pipelines
+
+### A. Practical Demo (Sample Library Sorting)
+
+1. Place unsorted `.wav` clips into `complete_drum_archive/`.
+2. Run `notebooks/PracticalDemo.ipynb`.
+3. The notebook:
+   - Loads `model1.keras` or `model2.keras` (set in the first cells).
+   - Normalizes audio, extracts MFCCs, predicts instrument class + confidence.
+   - Moves files into `ClassifiedArchive/<Instrument>/` with filenames formatted as `{instrument}_{confidence:.3f}_{original}.wav`.
+4. Review `ClassifiedArchive/metadata/` for prediction logs if enabled.
+
+### B. Archive-scale Experiments
+
+Use `notebooks/ArchiveClassifier.ipynb` to prototype large batch scoring directly against `complete_drum_archive/` or other datasets. Configure batch paths per cell instructions.
+
+## 7. Maintenance & Utilities
+
+- **Notebook path updates**: If you reorganize assets, run `python3 scripts/update_notebook_paths.py` to rewrite hard-coded paths inside all notebooks.
+- **Strict workflow rehearsal**: `scripts/run_strict_examples.sh` provides an interactive, step-by-step shell walkthrough of the strict population script (validation → logs → copy).
+- **Log review**: Inspect `logs/accepted_samples_*.txt` and `logs/rejected_samples_*.txt` (when `--save-logs` is used) to understand filtering outcomes.
+
+## 8. Troubleshooting
+
+| Symptom | Likely Cause | Resolution |
+| --- | --- | --- |
+| `TrainingData/AudioSamples/<Category>/` empty | Strict rules rejected all samples | Revisit rejection logs, relax tokens in `STRICT_CATEGORIES`, or run original `scripts/organize_drum_archive.py` for a broader sweep. |
+| TestData missing categories | Category has <50 strict matches | Lower the threshold in `scripts/populate_test_data.py` or augment TrainingData. |
+| Notebook path errors | Running outside project root | `cd /Users/Gilby/Projects/MLAudioClassifier` before launching notebooks or rerun `scripts/update_notebook_paths.py`. |
+| Low classification confidence in `PracticalDemo` | Sample distribution differs from training data | Add similar samples to TrainingData, rerun strict population, regenerate MFCCs, and retrain models. |
+| Script performance issues on large archives | Processing >100k files in strict mode | Run overnight or narrow `--source` to subdirectories. |
+
+## 9. Next Steps & Extensions
+
+- Expand class coverage by tweaking strict category definitions (see `docs/STRICT_CLASSIFICATION_GUIDE.md`).
+- Incorporate additional metrics (precision/recall per class) inside evaluation notebooks.
+- Integrate strict scripts into automated cron jobs to keep Training/Test splits and `complete_drum_archive/` classifications fresh.

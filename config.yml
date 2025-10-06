@@ -1,0 +1,72 @@
+# Drum Sample Classifier Configuration
+
+# Model settings
+model_path: ../models/model1.keras
+label_map: ../models/label_mapping.json
+canonical_mapping: ../models/canonical_mapping.json  # optional: model class -> canonical class
+
+# Fallback labels if mapping file not found (must match model output dimension)
+fallback_labels:
+  - Crash
+  - Hihat
+  - Kick
+  - Ride
+  - Snare
+  - Tom
+
+# Target labels to emit (null = emit all)
+target_labels:
+  - Crash
+  - Hihat
+  - Kick
+  - Ride
+  - Snare
+  - Tom
+
+# Audio processing parameters
+target_sr: 44100
+target_samples: 50000
+n_mfcc: 40
+n_fft: 2048
+hop_length: 512
+normalize: true
+min_duration_sec: 0.05
+
+# Inference settings
+batch_size: 32
+confidence_threshold: 0.0  # minimum confidence to record
+top_k: 3  # number of top predictions to store
+
+# Misc routing
+misc:
+  threshold: 0.50  # confidence below this goes to misc
+  label: misc
+
+# File discovery
+supported_formats:
+  - .wav
+  - .flac
+  - .aiff
+  - .aif
+  # - .mp3  # uncomment if audioread issues resolved
+
+max_files_per_run: null  # null = process all
+
+# Deduplication
+dedup_hash: true
+hash_algorithm: md5  # md5 or sha256
+
+# Additional features
+include_audio_stats: true  # compute RMS, spectral features
+
+# Paths
+paths:
+  archive_root: ../complete_drum_archive
+  runs_root: ../ClassifiedArchive
+  regenerated_root: ../RegeneratedArchive
+
+# Cache
+cache_dir: ../.cache/archive_classifier
+
+# Output
+compress_index: false  # set true to gzip index.jsonl
